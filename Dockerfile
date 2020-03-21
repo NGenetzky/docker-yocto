@@ -3,8 +3,25 @@ FROM phusion/baseimage:0.9.22
 
 MAINTAINER Derek Straka <derek@asterius.io>
 
+# Using "ARG" influences the behavior of apt only while building container.
 # No Debian that's a bad Debian! We don't have an interactive prompt don't fail
-ENV DEBIAN_FRONTEND noninteractive
+ARG DEBIAN_FRONTEND=noninteractive
+# ensure our rebuilds remain stable
+ARG APT_GET_UPDATE=2018-07-24
+
+# Yocto's depends
+# plus some debugging utils
+RUN apt-get --quiet --yes update && \
+	apt-get --quiet --yes install gawk wget git-core diffstat unzip \
+		texinfo gcc-multilib build-essential chrpath socat cpio python \
+        python3-pip python3-pexpect xz-utils debianutils iputils-ping \
+        libsdl1.2-dev xterm sudo curl libssl-dev tmux strace ltrace && \
+        apt-get clean && \
+        rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Set the default shell to bash instead of dash
+RUN echo "dash dash/sh boolean false" | debconf-set-selections && dpkg-reconfigure dash
+
 
 # Use baseimage-docker's init
 # https://blog.phusion.nl/2015/01/20/docker-and-the-pid-1-zombie-reaping-problem/
@@ -35,22 +52,6 @@ ADD bitbake.sh /usr/local/bin/image-writer
 ADD bitbake.sh /usr/local/bin/toaster
 ADD bitbake.sh /usr/local/bin/toaster-eventreplay
 
-
-# ensure our rebuilds remain stable
-ENV APT_GET_UPDATE 2018-07-24
-
-# Yocto's depends
-# plus some debugging utils
-RUN apt-get --quiet --yes update && \
-	apt-get --quiet --yes install gawk wget git-core diffstat unzip \
-		texinfo gcc-multilib build-essential chrpath socat cpio python \
-        python3-pip python3-pexpect xz-utils debianutils iputils-ping \
-        libsdl1.2-dev xterm sudo curl libssl-dev tmux strace ltrace && \
-        apt-get clean && \
-        rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-# Set the default shell to bash instead of dash
-RUN echo "dash dash/sh boolean false" | debconf-set-selections && dpkg-reconfigure dash
 
 # If you need to add more packages, just do additional RUN commands here
 # this is so that layers above to not have to be regenerated.
