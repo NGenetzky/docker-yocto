@@ -11,13 +11,44 @@ ARG APT_GET_UPDATE=2018-07-24
 
 # Yocto's depends
 # plus some debugging utils
-RUN apt-get --quiet --yes update && \
-	apt-get --quiet --yes install gawk wget git-core diffstat unzip \
-		texinfo gcc-multilib build-essential chrpath socat cpio python \
-        python3-pip python3-pexpect xz-utils debianutils iputils-ping \
-        libsdl1.2-dev xterm sudo curl libssl-dev tmux strace ltrace && \
-        apt-get clean && \
-        rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+# We don't use phusion's "install_clean" because we want portability.
+RUN apt-get --quiet --yes update \
+    # We first install these packages, to avoid skipping package configuration
+    && apt-get -y install --no-install-recommends \
+        apt-utils \
+        dialog \
+    # Then we install Minimum requirements for yocto
+    # plus some debugging utils
+    && apt-get --quiet --yes install \
+        build-essential \
+        chrpath \
+        cpio \
+        curl \
+        debianutils \
+        diffstat \
+        gawk \
+        gcc-multilib \
+        git-core \
+        iputils-ping \
+        libsdl1.2-dev \
+        libssl-dev \
+        ltrace\
+        python \
+        python3-pexpect \
+        python3-pip \
+        socat \
+        strace \
+        sudo \
+        texinfo \
+        tmux \
+        unzip \
+        wget \
+        xterm \
+        xz-utils \
+    # Clean up
+    && apt-get autoremove -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Set the default shell to bash instead of dash
 RUN echo "dash dash/sh boolean false" | debconf-set-selections && dpkg-reconfigure dash
