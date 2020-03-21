@@ -6,5 +6,4 @@ if [ -f "${OE_INIT_BUILD_ENV}" ]; then
     source "${OE_INIT_BUILD_ENV}"
 fi
 
-shift
 exec "$@"
