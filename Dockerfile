@@ -54,35 +54,38 @@ RUN apt-get --quiet --yes update \
 RUN echo "dash dash/sh boolean false" | debconf-set-selections && dpkg-reconfigure dash
 
 
-# Use baseimage-docker's init
-# https://blog.phusion.nl/2015/01/20/docker-and-the-pid-1-zombie-reaping-problem/
-ENTRYPOINT ["/sbin/my_init", "--"]
+ARG WORKDIR_AND_HOME='/var/build'
+RUN install -d \
+    "${WORKDIR_AND_HOME}" \
+    '/etc/entrypoint.d/' \
+    '/etc/my_init.d/'
 
-# Where we build
-RUN mkdir -p /var/build
-WORKDIR /var/build
+# phusion specific magic starts here. Must use FROM 'phusion/*'.
+#
+# - init scripts (/etc/my_init.d/)
+# - init process (/sbin/my_init)
+
 # workaround HOME ignore. see https://github.com/phusion/baseimage-docker/issues/119
-RUN echo /var/build > /etc/container_environment/HOME
+RUN echo "${WORKDIR_AND_HOME}" > /etc/container_environment/HOME
 
 # utilize my_init from the baseimage to create the user for us
 # the reason this is dynamic is so that the caller of the container
 # gets the UID:GID they need/want made for them
-RUN mkdir -p /etc/my_init.d
 ADD create-user.sh /etc/my_init.d/create-user.sh
 
-# bitbake wrapper to drop root perms
-ADD bitbake.sh /usr/local/bin/bitbake
-ADD bitbake.sh /usr/local/bin/bitbake-diffsigs
-ADD bitbake.sh /usr/local/bin/bitbake-dumpsig
-ADD bitbake.sh /usr/local/bin/bitbake-layers
-ADD bitbake.sh /usr/local/bin/bitbake-prserv
-ADD bitbake.sh /usr/local/bin/bitbake-selftest
-ADD bitbake.sh /usr/local/bin/bitbake-worker
-ADD bitbake.sh /usr/local/bin/bitdoc
-ADD bitbake.sh /usr/local/bin/image-writer
-ADD bitbake.sh /usr/local/bin/toaster
-ADD bitbake.sh /usr/local/bin/toaster-eventreplay
+# Use baseimage-docker's init to execute our custom entrypoint.
+# Our custom entrypoint allows "CMD" to be executed by the "BUILDUSER".
+# Additionally, the "plugin" nature allows us to utilze 'oe-init-build-env'.
+# The post below describes the motivation of 'my_init'
+# https://blog.phusion.nl/2015/01/20/docker-and-the-pid-1-zombie-reaping-problem/
+COPY entrypoint.sh /sbin/entrypoint
+COPY entrypoint.d/ /etc/entrypoint.d/
+ENTRYPOINT ["/sbin/my_init", "--", "/sbin/entrypoint"]
 
+# phusion specific magic ends here.
 
 # If you need to add more packages, just do additional RUN commands here
 # this is so that layers above to not have to be regenerated.
+
+# Where we build
+WORKDIR "${WORKDIR_AND_HOME}"
