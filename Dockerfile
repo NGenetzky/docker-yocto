@@ -100,6 +100,18 @@ ENTRYPOINT ["/sbin/my_init", "--", "/sbin/entrypoint"]
 
 # phusion specific magic ends here.
 
+# TODO: condense these lines
+ARG SDK_URL='http://downloads.yoctoproject.org/releases/yocto/yocto-2.5.3/toolchain/x86_64/poky-glibc-x86_64-core-image-sato-i586-toolchain-ext-2.5.3.sh'
+RUN if [ ! -z "${SDK_URL}" ] ; then \
+        curl -# -o '/tmp/toolchain-ext.sh' "${SDK_URL}" \
+        && curl -# -o '/tmp/toolchain-ext.sh.md5sum' "${SDK_URL}.md5sum" \
+    ; fi
+# RUN md5sum --check # TODO
+
+ARG SDK_DEST='/opt/yocto/poky-glibc-x86_64-core-image-sato-i586-toolchain-ext'
+RUN chmod 777 '/tmp/toolchain-ext.sh' \
+    && /sbin/setuser 'games' '/tmp/toolchain-ext.sh' -y -d "${SDK_DEST}"
+
 # If you need to add more packages, just do additional RUN commands here
 # this is so that layers above to not have to be regenerated.
 
@@ -152,4 +164,4 @@ LABEL \
     org.label-schema.schema-version="1.0" \
     org.label-schema.vcs-ref="$SOURCE_COMMIT" \
     org.label-schema.vcs-url="$META_VCS_URL" \
-    org.label-schema.version="$SOURCE_COMMIT" \
+    org.label-schema.version="$SOURCE_COMMIT"
